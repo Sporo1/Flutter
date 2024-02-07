@@ -1,0 +1,260 @@
+import 'package:flutter/material.dart';
+import 'package:english_words/english_words.dart';
+import 'package:provider/provider.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  // This widget is the root of your application.
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+        create: (context) => MyAppState(),
+        child: MaterialApp(
+          title: 'Namer App',
+          theme: ThemeData(
+            // This is the theme of your application.
+            //
+            // TRY THIS: Try running your application with "flutter run". You'll see
+            // the application has a purple toolbar. Then, without quitting the app,
+            // try changing the seedColor in the colorScheme below to Colors.green
+            // and then invoke "hot reload" (save your changes or press the "hot
+            // reload" button in a Flutter-supported IDE, or press "r" if you used
+            // the command line to start the app).
+            //
+            // Notice that the counter didn't reset back to zero; the application
+            // state is not lost during the reload. To reset the state, use hot
+            // restart instead.
+            //
+            // This works for code too, not just values: Most code changes can be
+            // tested with just a hot reload.
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
+            useMaterial3: true,
+          ),
+          home: MyHomePage(),
+        ));
+  }
+}
+
+class MyAppState extends ChangeNotifier {
+  var current = WordPair.random();
+
+  void getNext() {
+    current = WordPair.random();
+    notifyListeners();
+  }
+
+  var favorites = <WordPair>[];
+
+  void toggleFavorite() {
+    if (favorites.contains(current)) {
+      favorites.remove(current);
+      return;
+    }
+    favorites.add(current);
+    notifyListeners();
+  }
+}
+
+class MyHomePage extends StatefulWidget {
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  int selectedIndex = 0;
+  @override
+  Widget build(BuildContext context) {
+    var page = nagigateToPage(selectedIndex);
+
+    return LayoutBuilder(builder: (context, constraints) {
+      return Scaffold(
+        body: Row(
+          children: [
+            SafeArea(
+              child: NavigationRail(
+                extended: constraints.maxWidth >= 600,
+                destinations: [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.home),
+                    label: Text('Home'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.favorite),
+                    label: Text('Favorites'),
+                  ),
+                ],
+                selectedIndex: selectedIndex,
+                onDestinationSelected: (value) {
+                  setState(() {
+                    selectedIndex = value;
+                  });
+                  print(selectedIndex);
+                },
+              ),
+            ),
+            Expanded(
+              child: Container(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                child: page,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget nagigateToPage(int selectedIndex) {
+    Widget page;
+    switch (selectedIndex) {
+      case 0:
+        page = GeneratorPage();
+      case 1:
+        page = FavoritesPage();
+      default:
+        throw UnimplementedError('no widget for $selectedIndex');
+    }
+    return page;
+  }
+}
+
+class GeneratorPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    var appState = context.watch<MyAppState>();
+    var pair = appState.current;
+
+    IconData icon;
+    if (appState.favorites.contains(pair)) {
+      icon = Icons.favorite;
+    } else {
+      icon = Icons.favorite_border;
+    }
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          RandomWordCard(word: pair),
+          SizedBox(height: 10),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () {
+                  appState.toggleFavorite();
+                },
+                icon: Icon(icon),
+                label: Text('Like'),
+              ),
+              SizedBox(width: 10),
+              ElevatedButton(
+                onPressed: () {
+                  appState.getNext();
+                },
+                child: Text('Next'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class RandomWordCard extends StatelessWidget {
+  const RandomWordCard({
+    super.key,
+    required this.word,
+  });
+
+  final WordPair word;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textStyle = theme.textTheme.displayMedium!
+        .copyWith(color: theme.colorScheme.onPrimary);
+
+    return Card(
+      elevation: 10,
+      color: theme.colorScheme.primary,
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: WordLabel(word: word, textStyle: textStyle),
+      ),
+    );
+  }
+}
+
+class WordLabel extends StatelessWidget {
+  const WordLabel({
+    super.key,
+    required this.word,
+    required this.textStyle,
+  });
+
+  final WordPair word;
+  final TextStyle textStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      word.asLowerCase,
+      style: textStyle,
+      semanticsLabel: "${word.first}  ${word.second}",
+    );
+  }
+}
+
+class FavoritesPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    var appState = context.watch<MyAppState>();
+    var favorites = appState.favorites;
+    final theme = Theme.of(context);
+
+    if (appState.favorites.isEmpty) {
+      return Center(
+        child: Text("No favorites yet"),
+      );
+    }
+    // return ListView(
+    //   children: [
+    //     Padding(
+    //       padding: const EdgeInsets.all(20),
+    //       child: Text('You have '
+    //           '${appState.favorites.length} favorites:'),
+    //     ),
+    //     for (var pair in appState.favorites)
+    //       ListTile(
+    //         leading: Icon(Icons.favorite),
+    //         title: Text(pair.asLowerCase),
+    //       ),
+    //   ],
+    // );
+    return ListView.separated(
+      padding: const EdgeInsets.all(8),
+      itemCount: favorites.length,
+      itemBuilder: (BuildContext context, index) {
+        var pair = favorites[index];
+        return Container(
+          height: 50,
+          color: index % 2 == 1
+              ? theme.colorScheme.primaryContainer
+              : theme.colorScheme.background,
+          child: ListTile(
+            leading: Icon(Icons.favorite),
+            title: Text("${pair.first} ${pair.second}"),
+          ),
+        );
+      },
+      separatorBuilder: (context, index) => const Divider(),
+    );
+  }
+}
