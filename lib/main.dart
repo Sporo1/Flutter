@@ -58,6 +58,11 @@ class MyAppState extends ChangeNotifier {
     favorites.add(current);
     notifyListeners();
   }
+
+  void removeFavorite(WordPair pair) {
+    favorites.remove(pair);
+    notifyListeners();
+  }
 }
 
 class MyHomePage extends StatefulWidget {
@@ -69,7 +74,16 @@ class _MyHomePageState extends State<MyHomePage> {
   int selectedIndex = 0;
   @override
   Widget build(BuildContext context) {
+    var colorScheme = Theme.of(context).colorScheme;
     var page = nagigateToPage(selectedIndex);
+
+    var mainArea = ColoredBox(
+      color: colorScheme.surfaceVariant,
+      child: AnimatedSwitcher(
+        duration: Duration(milliseconds: 200),
+        child: page,
+      ),
+    );
 
     return LayoutBuilder(builder: (context, constraints) {
       return Scaffold(
@@ -93,14 +107,13 @@ class _MyHomePageState extends State<MyHomePage> {
                   setState(() {
                     selectedIndex = value;
                   });
-                  print(selectedIndex);
                 },
               ),
             ),
             Expanded(
               child: Container(
                 color: Theme.of(context).colorScheme.primaryContainer,
-                child: page,
+                child: mainArea,
               ),
             ),
           ],
@@ -215,46 +228,55 @@ class WordLabel extends StatelessWidget {
 class FavoritesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     var appState = context.watch<MyAppState>();
     var favorites = appState.favorites;
-    final theme = Theme.of(context);
 
-    if (appState.favorites.isEmpty) {
+    if (favorites.isEmpty) {
       return Center(
         child: Text("No favorites yet"),
       );
     }
-    // return ListView(
-    //   children: [
-    //     Padding(
-    //       padding: const EdgeInsets.all(20),
-    //       child: Text('You have '
-    //           '${appState.favorites.length} favorites:'),
-    //     ),
-    //     for (var pair in appState.favorites)
-    //       ListTile(
-    //         leading: Icon(Icons.favorite),
-    //         title: Text(pair.asLowerCase),
-    //       ),
-    //   ],
-    // );
-    return ListView.separated(
-      padding: const EdgeInsets.all(8),
-      itemCount: favorites.length,
-      itemBuilder: (BuildContext context, index) {
-        var pair = favorites[index];
-        return Container(
-          height: 50,
-          color: index % 2 == 1
-              ? theme.colorScheme.primaryContainer
-              : theme.colorScheme.background,
-          child: ListTile(
-            leading: Icon(Icons.favorite),
-            title: Text("${pair.first} ${pair.second}"),
+
+    return Center(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(30),
+            child: Text("You have ${favorites.length} favorites:"),
           ),
-        );
-      },
-      separatorBuilder: (context, index) => const Divider(),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.all(8),
+              itemCount: favorites.length,
+              itemBuilder: (BuildContext context, index) {
+                var pair = favorites[index];
+                return Container(
+                  margin: EdgeInsets.zero,
+                  padding: const EdgeInsets.all(8),
+                  height: 60,
+                  color: index % 2 == 1
+                      ? theme.colorScheme.primaryContainer
+                      : theme.colorScheme.background,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton.outlined(
+                        onPressed: () => appState.removeFavorite(pair),
+                        icon: Icon(Icons.delete_outline),
+                        color: theme.colorScheme.primary,
+                      ),
+                      SizedBox(width: 10),
+                      Text("${pair.first} ${pair.second}"),
+                    ],
+                  ),
+                );
+              },
+              separatorBuilder: (context, index) => const Divider(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
